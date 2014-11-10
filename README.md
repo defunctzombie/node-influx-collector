@@ -1,4 +1,4 @@
-# node-influx-collector
+# influx-collector [![Build Status](https://travis-ci.org/defunctzombie/node-influx-collector.svg?branch=master)](https://travis-ci.org/defunctzombie/node-influx-collector)
 
 [InfluxDB](http://influxdb.com/) stats collector for node.js
 
