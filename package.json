@@ -1,0 +1,33 @@
+{
+  "name": "influx-collector",
+  "version": "0.0.0",
+  "description": "Collect Stats into InfluxDB",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --ui qunit --reporter list --bail --check-leaks test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/defunctzombie/node-influx-collector.git"
+  },
+  "keywords": [
+    "influx",
+    "stats",
+    "metrics",
+    "collector",
+    "influxdb"
+  ],
+  "author": "Roman Shtylman <shtylman@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/defunctzombie/node-influx-collector/issues"
+  },
+  "homepage": "https://github.com/defunctzombie/node-influx-collector",
+  "devDependencies": {
+    "mocha": "2.0.1",
+    "nock": "0.48.2"
+  },
+  "dependencies": {
+    "superagent": "0.20.0"
+  }
+}
