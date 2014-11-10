@@ -7,6 +7,14 @@ suite('influx-collector');
 
 var COLLECTOR_URL = 'http://user:password@example.com/test-db';
 
+test('should do nothing with no url', function(done) {
+    var stats = Collector();
+
+    stats.collect('foo', {});
+    assert.equal(stats.collections, undefined);
+    done();
+});
+
 test('should create a collector', function(done) {
     Collector(COLLECTOR_URL);
     done();

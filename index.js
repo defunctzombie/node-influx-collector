@@ -11,6 +11,10 @@ function Collector(uri) {
 
     var self = this;
 
+    if (!uri) {
+        return;
+    }
+
     var parsed = url.parse(uri, true /* parse query args */);
 
     var info = {
@@ -48,6 +52,9 @@ Collector.prototype.__proto__ = EventEmitter.prototype;
 
 Collector.prototype.flush = function() {
     var self = this;
+    if (!self._uri) {
+        return;
+    }
 
     var body = [];
 
@@ -77,6 +84,11 @@ Collector.prototype.flush = function() {
 
 Collector.prototype.collect = function(series, obj) {
     var self = this;
+
+    if (!self._uri) {
+        return;
+    }
+
     var collections = self.collections;
 
     var keys = Object.keys(obj).sort();
