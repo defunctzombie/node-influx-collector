@@ -43,6 +43,7 @@ influx-collector is configured via the URI string. The following options can be 
 | autoFlush | yes | Specify `no` to avoid stats flushing automatically. See `flushing` below. |
 | flushInterval | 5000 | Stats are flushed every flushInterval milliseconds. |
 | instantFlush | no | Flush stats to server on collection. |
+| time_precision |  | Time precision when writing data. Only relevant if you are specifying the `time` field. |
 
 ## Flushing and Batches
 

@@ -1,3 +1,7 @@
+# UNRELEASED
+
+  * add time_precision support
+
 # 0.1.1 (2014-11-09)
 
   * no-op if no url specified

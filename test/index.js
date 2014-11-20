@@ -173,3 +173,25 @@ test('should support a autoFlush=no', function(done) {
         done();
     }, 1000);
 });
+
+test('should support time_precision', function(done) {
+    var stats = Collector(COLLECTOR_URL + '?time_precision=s');
+
+    var expected = [{
+        name: 'test-series',
+        columns: ['foo', 'time'],
+        points: [
+            [34.0, 1416512521]
+        ]
+    }];
+
+    var req = nock('http://example.com:8086')
+    .post('/db/test-db/series?time_precision=s', expected)
+    .reply(200)
+
+    stats.collect('test-series', { time: 1416512521, foo: 34.0 })
+
+    stats.flush();
+    req.done();
+    done();
+});

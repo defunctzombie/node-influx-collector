@@ -33,6 +33,7 @@ function Collector(uri) {
     var opt = parsed.query || {};
 
     self._instant_flush = opt.instantFlush == 'yes';
+    self._time_precision = opt.time_precision;
 
     // no automatic flush
     if (opt.autoFlush == 'no' || self._instant_flush) {
@@ -68,6 +69,7 @@ Collector.prototype.flush = function() {
 
     superagent
     .post(self._uri)
+    .query({ time_precision: self._time_precision })
     .send(body)
     .end(function(err, res) {
         if (err) {
