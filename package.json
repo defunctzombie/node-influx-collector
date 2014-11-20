@@ -1,6 +1,6 @@
 {
   "name": "influx-collector",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Collect Stats into InfluxDB",
   "main": "index.js",
   "scripts": {
