@@ -20,7 +20,7 @@ function Collector(uri) {
     var info = {
         protocol: parsed.protocol,
         slashes: parsed.slashes,
-        port: parsed.port || 8086,
+        port: parsed.port,
         auth: parsed.auth,
         hostname: parsed.hostname,
         pathname: '/db' + parsed.pathname + '/series',

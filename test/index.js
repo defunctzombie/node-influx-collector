@@ -5,7 +5,7 @@ var Collector = require('../');
 
 suite('influx-collector');
 
-var COLLECTOR_URL = 'http://user:password@example.com/test-db';
+var COLLECTOR_URL = 'http://user:password@example.com:8086/test-db';
 
 test('should do nothing with no url', function(done) {
     var stats = Collector();
