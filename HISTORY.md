@@ -1,3 +1,7 @@
+# UNRELEASED
+
+* fix creating array with given size during collection
+
 # 0.3.0 (2014-12-02)
 
   * remove default port setting of 8086
