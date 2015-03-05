@@ -1,4 +1,4 @@
-# UNRELEASED
+# 0.3.1 (2015-03-05)
 
 * fix creating array with given size during collection
 
