@@ -105,7 +105,7 @@ Collector.prototype.collect = function(series, obj) {
         };
     }
 
-    var points = new Array(keys.lenth);
+    var points = new Array(keys.length);
     for (var i=0 ; i<keys.length ; ++i) {
         points[i] = obj[keys[i]];
     }
