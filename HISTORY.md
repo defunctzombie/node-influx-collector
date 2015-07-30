@@ -1,3 +1,7 @@
+# UNRELEASED
+
+* update to use influxdb 0.9 API (not backwards compatible with 0.8)
+
 # 0.3.1 (2015-03-05)
 
 * fix creating array with given size during collection
