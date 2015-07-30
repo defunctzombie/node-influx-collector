@@ -1,12 +1,11 @@
 var EventEmitter = require('events').EventEmitter;
-var superagent = require('superagent');
+var influx = require('influx');
 var url = require('url');
 
-// http://influxdb.com/docs/v0.7/api/reading_and_writing_data.html
-
-function Collector(uri) {
+// create a collector for the given series
+function Collector(series, uri) {
     if (!(this instanceof Collector)) {
-        return new Collector(uri);
+        return new Collector(series, uri);
     }
 
     var self = this;
@@ -15,23 +14,35 @@ function Collector(uri) {
         return;
     }
 
+    if (!series) {
+        throw new Error('series name must be specified');
+    }
+
     var parsed = url.parse(uri, true /* parse query args */);
 
-    var info = {
-        protocol: parsed.protocol,
-        slashes: parsed.slashes,
-        port: parsed.port,
-        auth: parsed.auth,
-        hostname: parsed.hostname,
-        pathname: '/db' + parsed.pathname + '/series',
-    };
+    var username = undefined;
+    var password = undefined;
 
-    self._uri = url.format(info);
+    if (parsed.auth) {
+        var parts = parsed.auth.split(':');
+        username = parts.shift();
+        password = parts.shift();
+    }
 
-    self.collections = Object.create(null);
+    self._client = influx({
+        host : parsed.hostname,
+        port : parsed.port,
+        protocol : parsed.protocol,
+        username : username,
+        password : password,
+        database : parsed.pathname.slice(1) // remove leading '/'
+    })
+
+    self._points = [];
 
     var opt = parsed.query || {};
 
+    self._series_name = series;
     self._instant_flush = opt.instantFlush == 'yes';
     self._time_precision = opt.time_precision;
 
@@ -53,65 +64,41 @@ Collector.prototype.__proto__ = EventEmitter.prototype;
 
 Collector.prototype.flush = function() {
     var self = this;
-    if (!self._uri) {
+
+    if (!self._points || self._points.length === 0) {
         return;
     }
 
-    var body = [];
+    // only send N points at a time to avoid making requests too large
+    // TODO what if we are backed up?
+    var points = self._points.splice(0, 50);
+    var opt = { precision: self._time_precision };
 
-    Object.keys(self.collections).forEach(function(key) {
-        body.push(self.collections[key]);
-    });
-
-    if (body.length === 0) {
-        return;
-    }
-
-    superagent
-    .post(self._uri)
-    .query({ time_precision: self._time_precision })
-    .send(body)
-    .end(function(err, res) {
+    self._client.writePoints(self._series_name, points, opt, function(err) {
         if (err) {
+            // TODO if error put points back to send again?
             return self.emit('error', err);
         }
 
-        if (res.status !== 200) {
-            return self.emit('error', new Error(res.text));
+        // there are more points to flush out
+        if (self._points.length >0) {
+            setImmediate(self.flush.bind(self));
         }
     });
-
-    self.collections = [];
 };
 
-Collector.prototype.collect = function(series, obj) {
+// collect a data point (or object)
+// @param [Object] value the data
+// @param [Object] tags the tags (optional)
+Collector.prototype.collect = function(value, tags) {
     var self = this;
 
-    if (!self._uri) {
+    // disabled (due to no URL)
+    if (!self._points) {
         return;
     }
 
-    var collections = self.collections;
-
-    var keys = Object.keys(obj).sort();
-    var key = series + keys.join('');
-
-    var collection = self.collections[key];
-    if (!collection) {
-        collection = self.collections[key] = {
-            name: series,
-            columns: keys,
-            points: []
-        };
-    }
-
-    var points = new Array(keys.length);
-    for (var i=0 ; i<keys.length ; ++i) {
-        points[i] = obj[keys[i]];
-    }
-
-    collection.points.push(points);
-
+    self._points.push([value, tags]);
     if (self._instant_flush) {
         self.flush();
     }
