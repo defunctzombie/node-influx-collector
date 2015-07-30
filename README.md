@@ -2,6 +2,12 @@
 
 [InfluxDB](http://influxdb.com/) stats collector for node.js
 
+#### For InfluxDB 0.9.x use version 1.x.x of this module.
+
+#### For InfluxDB <= 0.8.x use version 0.x.x of this module.
+
+Note that the API changed between 0.x and 1.x to move the series name into the constructor.
+
 ## quickstart
 
 ```js
@@ -11,17 +17,20 @@
 var Stats = require('influx-collector');
 
 // create a stats collector
-var stats = Stats(process.env.INFLUX_STATS_URI);
+var mem_stats = Stats('process-memory-usage', process.env.INFLUX_STATS_URI);
 
 // example stat collection of process memory usage
 setInterval(function() {
     var mem = process.memoryUsage();
 
     // collect this stat into the 'process-memory-usage' series
-    stats.collect('process-memory-usage', {
+    // first argument is the data points
+    // second (optional) argument are the tags
+    mem_stats.collect({
         rss: mem.rss,
         heap_total: mem.heapTotal,
-        heap_used: mem.heapUsed,
+        heap_used: mem.heapUsed
+    }, {
         pid: process.pid,
         app: 'my-app'
     });
@@ -29,7 +38,7 @@ setInterval(function() {
 
 // make sure to handle errors to avoid uncaughtException
 // would be annoying if stats crashed your app :)
-stats.on('error', function(err) {
+mem_stats.on('error', function(err) {
     console.error(err); // or whatever you want
 });
 ```

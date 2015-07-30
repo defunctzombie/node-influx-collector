@@ -7,140 +7,123 @@ suite('influx-collector');
 
 var COLLECTOR_URL = 'http://user:password@example.com:8086/test-db';
 
-test('should do nothing with no url', function(done) {
-    var stats = Collector();
-
-    stats.collect('foo', {});
-    assert.equal(stats.collections, undefined);
+test('should create a collector', function(done) {
+    Collector('series', COLLECTOR_URL);
     done();
 });
 
-test('should create a collector', function(done) {
-    Collector(COLLECTOR_URL);
+test('should do nothing with no url', function(done) {
+    var stats = Collector('foo');
+
+    stats.collect({});
+    assert.deepEqual(stats._points, undefined);
     done();
 });
 
 test('should collect a single data point', function(done) {
-    var stats = Collector(COLLECTOR_URL);
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['foo'],
-        points: [
-            [34.0]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL);
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series foo=34');
+    })
 
-    stats.collect('test-series', { foo: 34.0 })
+    stats.collect({ foo: 34.0 })
 
     stats.flush();
-    req.done();
-    done();
+    setTimeout(function() {
+        req.done();
+        done();
+    }, 100);
+});
+
+test('should collect a single data point with tags', function(done) {
+    var stats = Collector('series', COLLECTOR_URL);
+
+    var req = nock('http://example.com:8086')
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series,host=cat foo=34');
+    })
+
+    stats.collect({ foo: 34.0 }, { host: 'cat' })
+
+    stats.flush();
+    setTimeout(function() {
+        req.done();
+        done();
+    }, 100);
+
 });
 
 test('should collect multiple data points', function(done) {
-    var stats = Collector(COLLECTOR_URL);
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['bar', 'foo'],
-        points: [
-            ['cat', 34.0],
-            ['dog', 10.2]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL);
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*\nseries foo=10.2,bar="dog"')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        var expected = 'series bar="cat",foo=34\nseries foo=10.2,bar="dog"';
+        assert.equal(request_body, expected);
+    });
 
-    stats.collect('test-series', { bar: 'cat', foo: 34.0 });
-    stats.collect('test-series', { foo: 10.2, bar: 'dog' });
-
-    stats.flush();
-    req.done();
-    done();
-});
-
-test('should collect multiple data points for multiple series', function(done) {
-    var stats = Collector(COLLECTOR_URL);
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['bar', 'foo'],
-        points: [
-            ['cat', 34.0],
-            ['dog', 10.2]
-        ]
-    }, {
-        name: 'test-series',
-        columns: ['bar', 'foo', 'more'],
-        points: [
-            ['goat', 44, 'baz']
-        ]
-    }, {
-        name: 'another-series',
-        columns: ['bar', 'foo'],
-        points: [
-            ['gym', 90]
-        ]
-    }];
-
-    var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
-
-    stats.collect('test-series', { bar: 'cat', foo: 34.0 });
-    stats.collect('test-series', { foo: 10.2, bar: 'dog' });
-    stats.collect('test-series', { foo: 44, bar: 'goat', more: 'baz' });
-    stats.collect('another-series', { foo: 90, bar: 'gym' });
+    stats.collect({ bar: 'cat', foo: 34.0 });
+    stats.collect({ foo: 10.2, bar: 'dog' });
 
     stats.flush();
-    req.done();
-    done();
+    setTimeout(function() {
+        req.done();
+        done();
+    }, 100);
 });
 
 test('should support instantFlush', function(done) {
-    var stats = Collector(COLLECTOR_URL + '?instantFlush=yes');
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['foo'],
-        points: [
-            [34.0]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL + '?instantFlush=yes');
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series foo=34');
+    });
 
-    stats.collect('test-series', { foo: 34.0 })
+    stats.collect({ foo: 34.0 });
 
-    req.done();
-    done();
+    setTimeout(function() {
+        req.done();
+        done();
+    }, 100);
 });
 
 test('should support a custom flushInterval', function(done) {
-    var stats = Collector(COLLECTOR_URL + '?flushInterval=500');
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['foo'],
-        points: [
-            [34.0]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL + '?flushInterval=500');
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series foo=34');
+    });
 
-    stats.collect('test-series', { foo: 34.0 })
+    stats.collect({ foo: 34.0 })
 
     setTimeout(function() {
         req.done();
@@ -149,49 +132,50 @@ test('should support a custom flushInterval', function(done) {
 });
 
 test('should support a autoFlush=no', function(done) {
-    var stats = Collector(COLLECTOR_URL + '?flushInterval=500&autoFlush=no');
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['foo'],
-        points: [
-            [34.0]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL + '?flushInterval=500&autoFlush=no');
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 'ms', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series foo=34');
+    });
 
-    stats.collect('test-series', { foo: 34.0 })
+    stats.collect({ foo: 34.0 })
 
     setTimeout(function() {
         assert(req.isDone() == false);
 
         stats.flush();
-        req.done();
-        done();
+
+        setTimeout(function() {
+            req.done();
+            done();
+        }, 200);
     }, 1000);
 });
 
 test('should support time_precision', function(done) {
-    var stats = Collector(COLLECTOR_URL + '?time_precision=s');
-
-    var expected = [{
-        name: 'test-series',
-        columns: ['foo', 'time'],
-        points: [
-            [34.0, 1416512521]
-        ]
-    }];
+    var stats = Collector('series', COLLECTOR_URL + '?time_precision=s');
 
     var req = nock('http://example.com:8086')
-    .post('/db/test-db/series?time_precision=s', expected)
-    .reply(200)
+    .filteringRequestBody(/.*/, function(body) {
+        return '*';
+    })
+    .post('/write', '*')
+    .query({db: 'test-db', u: 'user', p: 'password', precision: 's', database: 'test-db' })
+    .reply(200, function(uri, request_body) {
+        assert.equal(request_body, 'series foo=34 1416512521');
+    });
 
-    stats.collect('test-series', { time: 1416512521, foo: 34.0 })
+    stats.collect({ time: 1416512521, foo: 34.0 });
 
     stats.flush();
-    req.done();
-    done();
+    setTimeout(function() {
+        req.done();
+        done();
+    }, 200);
 });
