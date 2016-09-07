@@ -179,3 +179,15 @@ test('should support time_precision', function(done) {
         done();
     }, 200);
 });
+
+test('should compute the correct number of points', function() {
+    var stats = Collector('series', COLLECTOR_URL);
+    // Don't send anything if no points have been collected.
+    assert.equal(stats.computePointCountToSend([], 20), 0);
+
+    // Try to send at least point even if it can't fit in the max packet size.
+    assert.equal(stats.computePointCountToSend([1000, 2000], 50), 1);
+
+    assert.equal(stats.computePointCountToSend([1, 2, 3], 10), 3);
+    assert.equal(stats.computePointCountToSend([1, 2, 3], 4), 2);
+});
