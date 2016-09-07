@@ -62,6 +62,22 @@ function Collector(series, uri) {
 
 Collector.prototype.__proto__ = EventEmitter.prototype;
 
+MTU_SIZE = 1400; // Conservative estimate for the Maximum transmission unit.
+
+Collector.prototype.computePointCountToSend = function(pointSizes, upperBound) {
+  var index = 0;
+  var sum = 0;
+  while (index < pointSizes.length && sum <= upperBound) {
+    sum += pointSizes[index];
+    ++index;
+  }
+  if (sum > upperBound) {
+    --index;
+  }
+  index = Math.max(index, 1); // Always send at least one point.
+  return Math.min(index, pointSizes.length); // But not if there were no points at all.
+};
+
 Collector.prototype.flush = function() {
     var self = this;
 
@@ -71,7 +87,11 @@ Collector.prototype.flush = function() {
 
     // only send N points at a time to avoid making requests too large
     // TODO what if we are backed up?
-    var points = self._points.splice(0, 50);
+
+    var spliceIndex = self.computePointCountToSend(self._points.map(function (point) {
+      return JSON.stringify(point).length;
+    }), MTU_SIZE);
+    var points = self._points.splice(0, spliceIndex);
     var opt = { precision: self._time_precision };
 
     self._client.writePoints(self._series_name, points, opt, function(err) {
